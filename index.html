@@ -31,7 +31,7 @@
  <div class="logo">⚡ 전기 회로 실험</div><div class="side-note">기본 부품 · 끌어서 배치</div>
  <div class="palette" id="palette">
   <button class="partbtn" data-kind="wire" title="도선 추가"><svg viewBox="0 0 80 35"><path d="M14 18H66" stroke="#55acff" stroke-width="4"/><circle cx="14" cy="18" r="5" fill="#f44" stroke="white" stroke-width="2"/><circle cx="66" cy="18" r="5" fill="#f44" stroke="white" stroke-width="2"/></svg>전선 (도선)</button>
-  <button class="partbtn" data-kind="battery" title="건전지 추가"><svg viewBox="0 0 80 35"><path d="M10 18H23M58 18H70" stroke="#55acff" stroke-width="3"/><rect x="23" y="8" width="35" height="20" rx="3" fill="#245bea"/><rect x="29" y="10" width="25" height="16" rx="2" fill="#4b98ff"/><text x="41" y="22" text-anchor="middle" font-size="12" fill="white" font-weight="900">9V</text><path d="M25 4h7M28.5 0v8" stroke="#ffb649" stroke-width="2"/></svg>건전지</button>
+  <button class="partbtn" data-kind="battery" title="건전지 추가"><svg viewBox="0 0 80 35"><path d="M10 18H23M58 18H70" stroke="#55acff" stroke-width="3"/><rect x="23" y="8" width="35" height="20" rx="3" fill="#245bea"/><rect x="29" y="10" width="25" height="16" rx="2" fill="#4b98ff"/><text x="41" y="22" text-anchor="middle" font-size="12" fill="white" font-weight="900">18V</text><path d="M25 4h7M28.5 0v8" stroke="#ffb649" stroke-width="2"/></svg>건전지</button>
   <button class="partbtn" data-kind="lamp" title="꼬마전구 추가"><svg viewBox="0 0 80 35"><circle cx="40" cy="13" r="12" fill="#ffeeb4" stroke="#ffc525" stroke-width="2"/><path d="M36 10L40 16L44 10" stroke="#f7a100" fill="none" stroke-width="2"/><rect x="34" y="24" width="12" height="9" rx="2" fill="#c86d16"/></svg>꼬마전구</button>
   <button class="partbtn" data-kind="resistor" title="저항 추가"><svg viewBox="0 0 80 35"><path d="M8 18H23M58 18H73" stroke="#55acff" stroke-width="3"/><rect x="23" y="12" width="35" height="12" rx="3" fill="#dc8b34"/><path d="M32 12v12M38 12v12M45 12v12" stroke="#9c4419" stroke-width="3"/></svg>저항</button>
   <button class="partbtn" data-kind="switch" title="스위치 추가"><svg viewBox="0 0 80 35"><path d="M11 23H26M55 23H70" stroke="#55acff" stroke-width="3"/><circle cx="27" cy="23" r="4" fill="#ff4954"/><circle cx="55" cy="23" r="4" fill="#ff4954"/><path d="M27 23L52 8" stroke="white" stroke-width="3.5" stroke-linecap="round"/></svg>스위치</button>
@@ -74,7 +74,7 @@ const newid=()=>`p${seq++}`;
 const xy=e=>{const r=svg.getBoundingClientRect();return{x:view.x+(e.clientX-r.left)/view.scale,y:view.y+(e.clientY-r.top)/view.scale};};
 const inside=e=>{const r=svg.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;};
 const v2screen=p=>({x:(p.x-view.x)*view.scale,y:(p.y-view.y)*view.scale});
-const makePart=(kind,x,y)=>({id:newid(),kind,a:{x:x-90,y},b:{x:x+90,y},value:kind==='battery'?9:10,closed:true});
+const makePart=(kind,x,y)=>({id:newid(),kind,a:{x:x-90,y},b:{x:x+90,y},value:kind==='battery'?18:12,closed:true});
 function makeItem(kind,x,y){if(kind==='voltmeter')return{id:newid(),kind,x,y,probes:[{x:x-74,y:y+130},{x:x+74,y:y+130}]};if(kind==='clamp')return{id:newid(),kind,x,y};return makePart(kind,x,y)}
 const getPart=id=>parts.find(p=>p.id===id)||null;
 function addItem(kind,x,y){let p=makeItem(kind,x,y);if(kind==='voltmeter')meter=p;else if(kind==='clamp')clamp=p;else parts.push(p);sel=p.id;refresh();return p;}
@@ -184,31 +184,41 @@ function partSvg(p,preview=false){let a=p.a,b=p.b,m=midpoint(a,b),l=len(a,b),ang
  }else{
  let common=`<line class="component-line" x1="${-l/2}" y1="0" x2="-36" y2="0"/><line class="component-line" x1="36" y1="0" x2="${l/2}" y2="0"/>`;
  if(p.kind==='lamp'){
- // 전류가 조금이라도 흐르는 전구는 최소한 노란빛이 보인다.
- // 전류가 0일 때만 꺼진 유리색으로 처리하고, 높은 소비 전력에서는
- // 필라멘트의 백색광·후광의 넓이·빛살 길이를 비선형적으로 크게 키운다.
- const watts=absI*absI*Math.max(.1,Number(p.value)||.1);
- const energized=absI>.0008 && watts>1e-8;
- const power=clampN(Math.pow(watts/17,.82),0,1);
- const punch=Math.pow(power,1.55); // 높은 밝기의 시각적 차이를 강조
- const glow=energized?.21+.79*punch:0;
- const haloOpacity=energized?.26+.69*punch:0;
- const glass=energized?lerpColor('ffdd76','fffefa',Math.pow(power,1.25)):'#53667b';
- const border=energized?lerpColor('e2a027','ffc51e',Math.pow(power,.8)):'#75889e';
- const filament=energized?lerpColor('f4af19','ffffff',Math.pow(power,1.05)):'#617087';
- const globeRadius=energized?92+170*punch:85;
+ const energized=absI>.0008;
+ const stage=(()=>{
+  if(!energized)return 0;
+  if(absI<=0.38)return 1;
+  if(absI<=0.6)return 2;
+  if(absI<=0.8)return 3;
+  if(absI<=1.6)return 4;
+  if(absI<=3.2)return 5;
+  if(absI<=4.8)return 6;
+  if(absI<=6.4)return 7;
+  return 8;
+ })();
+ const S=[null,
+  {glass:'#fff5c9',border:'#dcc979',filament:'#e0b244',glowOpacity:.08,globeRadius:84,rayAlpha:.02,rayLength:42,rayWidth:1.0,coreOpacity:.05,bloomOpacity:.025,shineR:15,flareR:20,rayColor:'#efe09b',strokeW:2.7},
+  {glass:'#ffefab',border:'#e4c868',filament:'#e9ba39',glowOpacity:.13,globeRadius:95,rayAlpha:.04,rayLength:58,rayWidth:1.35,coreOpacity:.10,bloomOpacity:.05,shineR:20,flareR:28,rayColor:'#ecd579',strokeW:3.0},
+  {glass:'#ffe67d',border:'#efc048',filament:'#f4c433',glowOpacity:.20,globeRadius:110,rayAlpha:.08,rayLength:78,rayWidth:1.8,coreOpacity:.18,bloomOpacity:.09,shineR:26,flareR:38,rayColor:'#f0c95c',strokeW:3.3},
+  {glass:'#ffdf58',border:'#f5b92f',filament:'#ffd14b',glowOpacity:.32,globeRadius:130,rayAlpha:.14,rayLength:108,rayWidth:2.4,coreOpacity:.28,bloomOpacity:.16,shineR:32,flareR:54,rayColor:'#efc04e',strokeW:3.7},
+  {glass:'#ffe981',border:'#ffba22',filament:'#ffe38c',glowOpacity:.46,globeRadius:160,rayAlpha:.24,rayLength:145,rayWidth:3.2,coreOpacity:.43,bloomOpacity:.28,shineR:42,flareR:74,rayColor:'#ffd061',strokeW:4.1},
+  {glass:'#fff0ae',border:'#ffb217',filament:'#fff0c6',glowOpacity:.62,globeRadius:198,rayAlpha:.38,rayLength:188,rayWidth:4.2,coreOpacity:.58,bloomOpacity:.44,shineR:54,flareR:98,rayColor:'#ffd86e',strokeW:4.6},
+  {glass:'#fff7dc',border:'#ffab11',filament:'#fff9ea',glowOpacity:.79,globeRadius:245,rayAlpha:.56,rayLength:242,rayWidth:5.5,coreOpacity:.76,bloomOpacity:.67,shineR:68,flareR:132,rayColor:'#ffe28a',strokeW:5.2},
+  {glass:'#ffffff',border:'#ff9f08',filament:'#ffffff',glowOpacity:.96,globeRadius:310,rayAlpha:.82,rayLength:320,rayWidth:7.3,coreOpacity:.97,bloomOpacity:.93,shineR:88,flareR:182,rayColor:'#fff1b6',strokeW:6.0}
+ ];
+ const st=S[Math.max(1,stage)]||S[1];
  tag=`<defs>
- <radialGradient id="glow-${p.id}"><stop offset="0%" stop-color="#fffef8" stop-opacity="${haloOpacity}"/><stop offset="24%" stop-color="#ffe968" stop-opacity="${haloOpacity*.88}"/><stop offset="58%" stop-color="#ffc52b" stop-opacity="${haloOpacity*.46}"/><stop offset="100%" stop-color="#ffb821" stop-opacity="0"/></radialGradient>
- <radialGradient id="shine-${p.id}"><stop offset="0%" stop-color="#ffffff" stop-opacity="${glow*.99}"/><stop offset="67%" stop-color="#fff7bd" stop-opacity="${glow*.67}"/><stop offset="100%" stop-color="#fff4a6" stop-opacity="0"/></radialGradient>
- <radialGradient id="flare-${p.id}"><stop offset="0%" stop-color="#ffffff" stop-opacity="${.13+.87*punch}"/><stop offset="34%" stop-color="#fff8b7" stop-opacity="${.12+.7*punch}"/><stop offset="100%" stop-color="#ffcf32" stop-opacity="0"/></radialGradient></defs>`;
+ <radialGradient id="glow-${p.id}"><stop offset="0%" stop-color="#fffde1" stop-opacity="${energized?st.glowOpacity:0}"/><stop offset="24%" stop-color="#fff5a6" stop-opacity="${energized?st.glowOpacity*.92:0}"/><stop offset="58%" stop-color="#ffd84d" stop-opacity="${energized?st.glowOpacity*.50:0}"/><stop offset="100%" stop-color="#ffc81e" stop-opacity="0"/></radialGradient>
+ <radialGradient id="shine-${p.id}"><stop offset="0%" stop-color="#ffffff" stop-opacity="${energized?st.coreOpacity:0}"/><stop offset="55%" stop-color="#fffbd3" stop-opacity="${energized?st.coreOpacity*.72:0}"/><stop offset="100%" stop-color="#fff2a6" stop-opacity="0"/></radialGradient>
+ <radialGradient id="flare-${p.id}"><stop offset="0%" stop-color="#ffffff" stop-opacity="${energized?st.bloomOpacity:0}"/><stop offset="36%" stop-color="#fff9e8" stop-opacity="${energized?st.bloomOpacity*.68:0}"/><stop offset="100%" stop-color="#ffe56b" stop-opacity="0"/></radialGradient></defs>`;
  let rays='';if(energized)for(let i=0;i<12;i++){
-  const t=i*Math.PI/6,x1=Math.cos(t)*40,y1=Math.sin(t)*40-18;
-  const length=51+82*punch+(i%3)*10*punch,x2=Math.cos(t)*length,y2=Math.sin(t)*length-18;
-  rays+=`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${power>.65?'#ffe65f':'#eebf44'}" stroke-width="${1.5+6*punch}" opacity="${.18+.8*punch}" stroke-linecap="round"/>`;
+  const t=i*Math.PI/6,x1=Math.cos(t)*36,y1=Math.sin(t)*36-18;
+  const length=st.rayLength+(i%3)*18*(stage/8),x2=Math.cos(t)*length,y2=Math.sin(t)*length-18;
+  rays+=`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${st.rayColor}" stroke-width="${st.rayWidth}" opacity="${st.rayAlpha}" stroke-linecap="round"/>`;
  }
- const fire=energized?`<circle cx="0" cy="-17" r="${20+45*punch}" fill="url(#shine-${p.id})" pointer-events="none"/>`:'';
- const flare=energized?`<circle cx="0" cy="-17" r="${17+53*punch}" fill="url(#flare-${p.id})" opacity="${.20+.80*punch}" pointer-events="none"/>`:'';
- body=`<g transform="translate(${m.x} ${m.y}) rotate(${ang})" class="part-move" ${hit}>${common}<circle cx="0" cy="-17" r="${globeRadius}" fill="url(#glow-${p.id})" pointer-events="none"/>${rays}<path class="lamp-glass" d="M-19 -3C-27 -13 -29 -26 -21 -39C-11 -57 12 -57 21 -39C29 -25 26 -13 19 -3Z" fill="${glass}" stroke="${border}" stroke-width="${3+power*1.5}"/><path d="M-10 -28L-3 -18L3 -29L10 -18" stroke="${filament}" stroke-width="${2.6+punch*2}" fill="none"/>${fire}${flare}<path d="M-3 -18L-3 -8M10 -18L10 -8" stroke="${energized?lerpColor('c78e20','efb312',power):'#676e7c'}" stroke-width="2"/><rect x="-15" y="-6" width="30" height="26" rx="5" fill="#a86014" stroke="#6b3e13" stroke-width="2"/><path d="M-15 1H15M-15 8H15M-12 15H12" stroke="#ffc56f" stroke-width="3"/><rect x="-10" y="20" width="20" height="6" rx="2" fill="#555e68"/><rect x="-38" y="-62" width="76" height="100" fill="transparent"/></g>`;
+ const fire=energized?`<circle cx="0" cy="-17" r="${st.shineR}" fill="url(#shine-${p.id})" pointer-events="none"/>`:'';
+ const flare=energized?`<circle cx="0" cy="-17" r="${st.flareR}" fill="url(#flare-${p.id})" pointer-events="none"/>`:'';
+ body=`<g transform="translate(${m.x} ${m.y}) rotate(${ang})" class="part-move" ${hit}>${common}<circle cx="0" cy="-17" r="${energized?st.globeRadius:78}" fill="url(#glow-${p.id})" pointer-events="none"/>${rays}<path class="lamp-glass" d="M-19 -3C-27 -13 -29 -26 -21 -39C-11 -57 12 -57 21 -39C29 -25 26 -13 19 -3Z" fill="${energized?st.glass:'#53667b'}" stroke="${energized?st.border:'#75889e'}" stroke-width="${energized?st.strokeW:2.5}"/><path d="M-10 -28L-3 -18L3 -29L10 -18" stroke="${energized?st.filament:'#617087'}" stroke-width="${energized?(2.4+stage*.35):2.4}" fill="none"/>${fire}${flare}<path d="M-3 -18L-3 -8M10 -18L10 -8" stroke="${energized?lerpColor('bc954c','fff2b5',stage/8):'#676e7c'}" stroke-width="2"/><rect x="-15" y="-6" width="30" height="26" rx="5" fill="#a86014" stroke="#6b3e13" stroke-width="2"/><path d="M-15 1H15M-15 8H15M-12 15H12" stroke="#ffc56f" stroke-width="3"/><rect x="-10" y="20" width="20" height="6" rx="2" fill="#555e68"/><rect x="-38" y="-62" width="76" height="100" fill="transparent"/></g>`;
  ed=editableValue(p,m,m.y+61,fmt(p.value,1),'Ω');
  }else if(p.kind==='battery'){
  body=`<g transform="translate(${m.x} ${m.y}) rotate(${ang})" class="part-move" ${hit}>${common}<rect x="-40" y="-20" width="80" height="40" rx="4" fill="#244cd1" stroke="#18379f" stroke-width="2"/><rect x="-24" y="-20" width="50" height="40" rx="3" fill="#368de9"/><rect x="-10" y="-20" width="9" height="40" fill="#f1a334"/><rect x="37" y="-13" width="8" height="26" rx="2" fill="#c4cad5"/><text x="-29" y="6" fill="#fff" font-size="20" font-weight="900" text-anchor="middle">+</text><text x="29" y="6" fill="#fff" font-size="22" font-weight="900" text-anchor="middle">−</text><text x="7" y="6" fill="white" font-size="13" font-weight="900" text-anchor="middle">${fmt(p.value,1)}V</text><rect x="-42" y="-29" width="84" height="55" fill="transparent"/></g>`;
